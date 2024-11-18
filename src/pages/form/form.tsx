@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import axios from 'axios';
 
 function BusinessForm() {
     const [formData, setFormData] = useState({
@@ -25,9 +26,23 @@ function BusinessForm() {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        console.log('Form submitted:', formData);
+
+        const formDataObj = new FormData();
+        formDataObj.append('businessName', formData.businessName);
+        if (formData.mainImage) formDataObj.append('mainImage', formData.mainImage);
+        formDataObj.append('description', formData.description);
+
+        try {
+            const response = await axios.post('http://localhost:5000/api/businesses', formDataObj, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            console.log('Form submitted successfully:', response.data);
+        } catch (error) {
+            console.error('Error submitting form:', error);
+        }
     };
 
     return (
