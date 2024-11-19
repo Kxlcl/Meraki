@@ -1,81 +1,82 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 
-function BusinessForm() {
-  const [formData, setFormData] = useState({
-    businessName: '',
-    mainImage: null, // Store the uploaded file here
-    description: '',
-  });
+const Form = () => {
+  const [businessName, setBusinessName] = useState('');
+  const [description, setDescription] = useState('');
+  const [file, setFile] = useState(null);
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState('');
 
-  // Handle text input changes
-  const handleChange = (e) => {
-    const { id, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [id]: value, // Update the corresponding field dynamically
-    }));
+  const handleFileChange = (event) => {
+    setFile(event.target.files[0]); // Set the file selected by the user
   };
 
-  // Handle file input changes
-  const handleFileChange = (e) => {
-    const { id, files } = e.target;
-    if (files && files.length > 0) {
-      setFormData((prevData) => ({
-        ...prevData,
-        [id]: files[0], // Save the first file selected
-      }));
-    }
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
+  const handleSubmit = async (event) => {
+    event.preventDefault(); // Prevent the default form submit behavior
+    
+    // Create FormData to send as multipart/form-data
+    const formData = new FormData();
+    formData.append('businessName', businessName);
+    formData.append('description', description);
+    formData.append('mainImage', file); // Attach the image file to the form data
+    
     try {
-      const data = new FormData();
-      data.append('businessName', formData.businessName);
-      data.append('description', formData.description);
-      if (formData.mainImage) {
-        data.append('mainImage', formData.mainImage); // Attach file
-      }
-
-      const response = await axios.post('http://localhost:5001/api/businesses', data, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      // Make the POST request using Axios to your backend
+      const response = await axios.post('http://localhost:5001/api/businesses', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data', // Make sure the server expects this
+        },
       });
 
-      console.log('Form submitted successfully:', response.data);
-    } catch (error) {
-      console.error('Error submitting form:', error);
+      // If successful, handle the response
+      setMessage('Form submitted successfully');
+      setError(null); // Clear any previous errors
+      console.log(response.data);
+    } catch (err) {
+      // Handle errors
+      setMessage('');
+      setError('Error submitting the form. Please try again.');
+      console.error(err.response ? err.response.data : err.message);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
-        <label htmlFor="businessName">Name of Business:</label>
-        <input
-          id="businessName"
-          type="text"
-          value={formData.businessName}
-          onChange={handleChange}
-        />
-      </div>
-      <div>
-        <label htmlFor="mainImage">Main Image:</label>
-        <input id="mainImage" type="file" onChange={handleFileChange} />
-      </div>
-      <div>
-        <label htmlFor="description">Description:</label>
-        <textarea
-          id="description"
-          value={formData.description}
-          onChange={handleChange}
-        />
-      </div>
-      <button type="submit">Submit</button>
-    </form>
-  );
-}
+    <div>
+      <h2>Business Form</h2>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label>Business Name</label>
+          <input
+            type="text"
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <label>Description</label>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <label>Main Image</label>
+          <input
+            type="file"
+            onChange={handleFileChange}
+            required
+          />
+        </div>
+        <button type="submit">Submit</button>
+      </form>
 
-export default BusinessForm;
+      {message && <p>{message}</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+    </div>
+  );
+};
+
+export default Form;
