@@ -46,23 +46,30 @@ const businessSchema = new mongoose.Schema({
     description: { type: String, required: true },
 });
 const Business = mongoose.model('Business', businessSchema);
-
-// Routes
-
-// Route to fetch a business by ID and render EJS
 app.get('/businesses/:id', async (req, res) => {
-  try {
-    const business = await Business.findById(req.params.id);
-    if (!business) {
-      return res.status(404).render('error', { message: 'Business not found' });
-    }
+  const { id } = req.params;
+  console.log('Received ID:', id);  // Log the received ID to check its format
 
-    res.render('business', { business });
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.error('Invalid ObjectId format');
+      return res.status(400).render('error', { message: 'Invalid Business ID format', error: null });
+  }
+
+  try {
+      const business = await Business.findById(id);
+      if (!business) {
+          console.error('Business not found with the given ID');
+          return res.status(404).render('error', { message: 'Business not found', error: null });
+      }
+      res.render('business', { business });
   } catch (err) {
-    console.error('Error occurred:', err);
-    res.status(500).render('error', { message: 'Server error occurred', error: err });
+      console.error('Database error:', err);
+      res.status(500).render('error', { message: 'Database error occurred', error: err });
   }
 });
+n
+
 
 
 // Handle POST request to create a new business
