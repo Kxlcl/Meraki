@@ -13,31 +13,22 @@ const Form = () => {
   };
 
   const handleSubmit = async (event) => {
-    event.preventDefault(); // Prevent the default form submit behavior
-    
-    // Create FormData to send as multipart/form-data
+    event.preventDefault(); // Prevent the default form submission behavior
+  
     const formData = new FormData();
     formData.append('businessName', businessName);
     formData.append('description', description);
-    formData.append('mainImage', file); // Attach the image file to the form data
-    
+    formData.append('mainImage', file);
+  
     try {
-      // Make the POST request using Axios to your backend
-      const response = await axios.post('http://localhost:5001/api/businesses', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data', // Make sure the server expects this
-        },
-      });
-
-      // If successful, handle the response
+      const response = await axios.post('https://your-live-url.com/api/businesses', formData);
       setMessage('Form submitted successfully');
-      setError(null); // Clear any previous errors
+      setError(null);
       console.log(response.data);
     } catch (err) {
-      // Handle errors
       setMessage('');
       setError('Error submitting the form. Please try again.');
-      console.error(err.response ? err.response.data : err.message);
+      console.error(err.message); // Log full error message for more insight
     }
   };
 
