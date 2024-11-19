@@ -1,28 +1,24 @@
 import express from 'express';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 
-// Middleware for static files (if you want to serve HTML, CSS, JS files)
-const __dirname = path.resolve(); // Since ES modules don't have __dirname
-app.use(express.static(path.join(__dirname, 'public')));
+// Get __dirname in ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Both / and /home should return the same content
-app.get(['/', '/home'], (req, res) => {
-  res.send('Welcome to the Home page!');
-});
+// Serve static files from the React app build folder
+const buildPath = path.join(__dirname, '../build'); // Adjust path if needed
+app.use(express.static(buildPath));
 
-// Example route for About page
-app.get('/about', (req, res) => {
-  res.send('This is the About page.');
-});
-
-// Catch-all route for other paths (returns 404 for undefined routes)
+// Catch-all route for React Router
 app.get('*', (req, res) => {
-  res.status(404).send('Page not found');
+  res.sendFile(path.join(buildPath, 'index.html'));
 });
 
-// Start server
-app.listen(5001, () => {
-  console.log('Server running on http://localhost:5001');
+// Start the server
+const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
 });
