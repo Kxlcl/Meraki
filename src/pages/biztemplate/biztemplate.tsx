@@ -10,11 +10,12 @@ interface Business {
 }
 
 const BusinessDetail = () => {
-  const { id } = useParams<{ id: string }>(); // Ensure that 'id' is a string
-  const [business, setBusiness] = useState<Business | null>(null); // Can be null initially
+  const { id } = useParams<{ id: string }>(); // Ensure 'id' is passed correctly
+  const [business, setBusiness] = useState<Business | null>(null);
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
+    // Use axios to fetch the business details using the ID
     axios.get(`http://localhost:5001/api/businesses/${id}`)
       .then((response) => {
         setBusiness(response.data);
@@ -26,8 +27,7 @@ const BusinessDetail = () => {
   }, [id]);
 
   if (error) return <div>{error}</div>;
-
-  if (!business) return <div>Loading...</div>; // Show loading state if no business data
+  if (!business) return <div>Loading...</div>;
 
   return (
     <div>

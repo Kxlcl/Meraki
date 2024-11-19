@@ -81,6 +81,19 @@ app.get('/api/businesses', async (req, res) => {
     }
 });
 
+// Fetch a business by ID (updated)
+app.get('/api/businesses/:id', async (req, res) => {
+    try {
+        const business = await Business.findById(req.params.id);
+        if (!business) {
+            return res.status(404).json({ message: 'Business not found' });
+        }
+        res.json(business);
+    } catch (err) {
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
 // Serve React Frontend (Ensure React build is correctly served)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));  // Correct static path

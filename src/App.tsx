@@ -12,7 +12,7 @@ const AppRoutes = () => {
         <Route path="/home" element={<Home />} />
         <Route path="/explore" element={<Explore />} />
         <Route path="/addbusiness" element={<BusinessForm />} />
-        <Route path="/businesses/:id" element={<BusinessDetail />} />
+        <Route path="/businesses/:id" element={<BusinessDetail />} /> {/* Ensure this route is correct */}
       </Routes>
     </BrowserRouter>
   );
