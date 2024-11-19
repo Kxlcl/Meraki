@@ -21,7 +21,11 @@ const Form = () => {
     formData.append('mainImage', file);
   
     try {
-      const response = await axios.post('https://your-live-url.com/api/businesses', formData);
+      const response = await axios.post('https://monkfish-app-cemkx.ondigitalocean.app/api/businesses', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data', // Ensure the content type is correct for file uploads
+        },
+      });      
       setMessage('Form submitted successfully');
       setError(null);
       console.log(response.data);
