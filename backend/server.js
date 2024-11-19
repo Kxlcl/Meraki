@@ -1,125 +1,82 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import path from 'path';
-import multer from 'multer';
-import fs from 'fs';
 import cors from 'cors';
+import multer from 'multer';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load environment variables from .env file
-dotenv.config();
-
-// Create Express app
 const app = express();
+const PORT = process.env.PORT || 5001;
 
-// Middleware to parse JSON body
+// Middleware
+app.use(cors());
 app.use(express.json());
 
-// Use `import.meta.url` to derive the directory name
-const __dirname = path.dirname(new URL(import.meta.url).pathname);
+// Static File Serving for React
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, 'build'))); // Correct path to "build"
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir);
-}
+// MongoDB Connection
+const DB_URI = 'mongodb+srv://merakiadmin:kM8VyIcA2K0bgZay@cluster0.op3vy.mongodb.net/';
+mongoose
+    .connect(DB_URI)
+    .then(() => console.log('Connected to MongoDB successfully'))
+    .catch((err) => console.error('Error connecting to MongoDB:', err));
 
-// Enable CORS
-app.use(cors());
-
-// Set up multer for file uploads
+// File Upload Setup
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir); // Store in 'uploads/' folder
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Generate a unique filename
-  },
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    },
 });
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
-// MongoDB connection URI from .env
-const mongoDB_URI = process.env.MONGODB_URI;
+// Mongoose Schema and Model
+const businessSchema = new mongoose.Schema({
+    businessName: { type: String, required: true },
+    mainImage: { type: String },
+    description: { type: String, required: true },
+});
+const Business = mongoose.model('Business', businessSchema);
 
-console.log('MongoDB URI:', mongoDB_URI);
-
-// MongoDB connection setup
-mongoose.connect(mongoDB_URI)
-  .then(() => {
-    console.log('Connected to MongoDB Atlas');
-  })
-  .catch((error) => {
-    console.error('Error connecting to MongoDB Atlas:', error.message);
-  });
-
-// Define a schema for the business form submission
-const BusinessFormSchema = new mongoose.Schema({
-  businessName: { type: String, required: true },
-  mainImage: { type: String, required: true }, // Store file path or URL
-  description: { type: String, required: true },
-}, { timestamps: true });
-
-const BusinessForm = mongoose.model('BusinessForm', BusinessFormSchema);
-
-// API route for form submission with file upload
+// Routes
 app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
-  console.log('Request Body:', req.body); // Log the form data
-  console.log('Uploaded File:', req.file); // Log the file details
+    try {
+        const { businessName, description } = req.body;
+        const mainImage = req.file ? req.file.path : null;
 
-  const { businessName, description } = req.body;
-  const mainImage = req.file?.path; // Get the file path of the uploaded image
+        const business = new Business({
+            businessName,
+            mainImage,
+            description,
+        });
 
-  // Ensure the file is present
-  if (!mainImage) {
-    return res.status(400).json({ error: 'Main image is required' });
-  }
-
-  // Ensure business name and description are provided
-  if (!businessName || !description) {
-    return res.status(400).json({ error: 'Business name and description are required' });
-  }
-
-  // Create a new document in the database
-  const newBusiness = new BusinessForm({
-    businessName,
-    mainImage,
-    description,
-  });
-
-  try {
-    await newBusiness.save();
-    res.status(200).json({ message: 'Form submitted successfully' });
-  } catch (error) {
-    console.error('Error saving form:', error);
-    res.status(500).json({ error: 'Error submitting the form' });
-  }
-});
-
-// Serve React app (catch-all for routes)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'build', 'index.html'));
-});
-
-// Set the server to listen on the specified port
-const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-// API route to get a specific business by its ID
-app.get('/api/businesses/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const business = await BusinessForm.findById(id); // Find business by ID
-    if (!business) {
-      return res.status(404).json({ error: 'Business not found' });
+        await business.save();
+        res.status(201).json({ message: 'Business created successfully', business });
+    } catch (err) {
+        res.status(500).json({ error: 'An error occurred while creating the business' });
     }
-    res.status(200).json(business); // Send back the business data
-  } catch (error) {
-    console.error('Error fetching business by ID:', error);
-    res.status(500).json({ error: 'Error fetching business by ID' });
-  }
 });
 
-// backend/server.js
-const Business = require('./models/business');  // Correct path to the model
+app.get('/api/businesses', async (req, res) => {
+    try {
+        const businesses = await Business.find();
+        res.status(200).json(businesses);
+    } catch (err) {
+        res.status(500).json({ error: 'An error occurred while fetching businesses' });
+    }
+});
+
+// Serve React Frontend
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'build', 'index.html')); // Correct static path
+});
+
+// Start Server
+app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+});

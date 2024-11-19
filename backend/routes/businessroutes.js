@@ -1,6 +1,6 @@
 // routes/businessRoutes.js
 const express = require('express');
-const Business = require('../models/business');  // Ensure this is your correct model path
+const Business = require('../models/businessbackend');  // Ensure this is your correct model path
 const router = express.Router();
 
 // Fetch a business by ID
