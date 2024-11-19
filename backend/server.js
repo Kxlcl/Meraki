@@ -8,14 +8,18 @@ import { fileURLToPath } from 'url';
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// Manually create __dirname for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.set('view engine', 'ejs'); // Set EJS as view engine
+app.set('views', path.join(__dirname, 'views')); // Set path to your views folder
 
-// Static File Serving for React
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, 'build'))); // Correct path to "build"
+// Serve static files (like images)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
 const DB_URI = 'mongodb+srv://merakiadmin:kM8VyIcA2K0bgZay@cluster0.op3vy.mongodb.net/';
@@ -35,12 +39,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// Ensure the uploads directory exists
-import fs from 'fs';
-if (!fs.existsSync('uploads')) {
-    fs.mkdirSync('uploads');
-}
-
 // Mongoose Schema and Model
 const businessSchema = new mongoose.Schema({
     businessName: { type: String, required: true },
@@ -50,6 +48,23 @@ const businessSchema = new mongoose.Schema({
 const Business = mongoose.model('Business', businessSchema);
 
 // Routes
+
+// Route to fetch a business by ID and render EJS
+app.get('/businesses/:id', async (req, res) => {
+  try {
+    const business = await Business.findById(req.params.id);
+    if (!business) {
+      return res.status(404).render('error', { message: 'Business not found' });
+    }
+
+    res.render('business', { business });
+  } catch (err) {
+    console.error('Error occurred:', err);
+    res.status(500).render('error', { message: 'Server error occurred', error: err });
+  }
+});
+
+
 // Handle POST request to create a new business
 app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
     try {
@@ -70,33 +85,22 @@ app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
     }
 });
 
-// Handle GET request to fetch all businesses
+// Handle fetching all businesses (API route)
 app.get('/api/businesses', async (req, res) => {
     try {
         const businesses = await Business.find();
         res.status(200).json(businesses);
     } catch (err) {
         console.error(err);
-        res.status(500).json({ error: 'An error occurred while fetching businesses' });
-    }
-});
-
-// Fetch a business by ID (updated)
-app.get('/api/businesses/:id', async (req, res) => {
-    try {
-        const business = await Business.findById(req.params.id);
-        if (!business) {
-            return res.status(404).json({ message: 'Business not found' });
-        }
-        res.json(business);
-    } catch (err) {
-        res.status(500).json({ message: 'Server error' });
+        res.status(500).json({ error: 'Error fetching businesses' });
     }
 });
 
 // Serve React Frontend (Ensure React build is correctly served)
+app.use(express.static(path.join(__dirname, 'build')));  // Correct static path to React build
+
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));  // Correct static path
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));  // Serve React app for all other routes
 });
 
 // Start Server

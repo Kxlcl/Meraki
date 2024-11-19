@@ -10,15 +10,15 @@ interface Business {
 }
 
 const BusinessDetail = () => {
-  const { id } = useParams<{ id: string }>(); // Ensure 'id' is passed correctly
+  const { id } = useParams<{ id: string }>(); // Get 'id' from the URL params
   const [business, setBusiness] = useState<Business | null>(null);
   const [error, setError] = useState<string>('');
 
   useEffect(() => {
-    // Use axios to fetch the business details using the ID
+    // Fetch data from the backend using the business ID from the URL params
     axios.get(`http://localhost:5001/api/businesses/${id}`)
       .then((response) => {
-        setBusiness(response.data);
+        setBusiness(response.data); // Store the fetched business data
       })
       .catch((error) => {
         setError('Error fetching business details');
@@ -27,7 +27,7 @@ const BusinessDetail = () => {
   }, [id]);
 
   if (error) return <div>{error}</div>;
-  if (!business) return <div>Loading...</div>;
+  if (!business) return <div>Loading...</div>; // Show loading message until data is fetched
 
   return (
     <div>
