@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import ejs from 'ejs';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -12,81 +12,54 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(express.json());
 
-// Static File Serving for React
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, 'build'))); // Correct path to "build"
+// Set EJS as the templating engine
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views')); // Set views folder for templates
 
 // MongoDB Connection
 const DB_URI = 'mongodb+srv://merakiadmin:kM8VyIcA2K0bgZay@cluster0.op3vy.mongodb.net/';
 mongoose
-    .connect(DB_URI)
-    .then(() => console.log('Connected to MongoDB successfully'))
-    .catch((err) => console.error('Error connecting to MongoDB:', err));
+  .connect(DB_URI)
+  .then(() => console.log('Connected to MongoDB successfully'))
+  .catch((err) => console.error('Error connecting to MongoDB:', err));
 
 // File Upload Setup
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');  // Path where the uploaded files will be saved
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);  // Save with unique names based on timestamp
-    },
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
 });
 const upload = multer({ storage });
 
-// Ensure the uploads directory exists
-import fs from 'fs';
-if (!fs.existsSync('uploads')) {
-    fs.mkdirSync('uploads');
-}
-
 // Mongoose Schema and Model
 const businessSchema = new mongoose.Schema({
-    businessName: { type: String, required: true },
-    mainImage: { type: String },
-    description: { type: String, required: true },
+  businessName: { type: String, required: true },
+  mainImage: { type: String },
+  description: { type: String, required: true },
 });
 const Business = mongoose.model('Business', businessSchema);
 
-// Routes
-// Handle POST request to create a new business
-app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
-    try {
-        const { businessName, description } = req.body;
-        const mainImage = req.file ? `uploads/${req.file.filename}` : null;
-
-        const business = new Business({
-            businessName,
-            mainImage,
-            description,
-        });
-
-        await business.save();
-        res.status(201).json({ message: 'Business created successfully', business });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'An error occurred while creating the business' });
+// Route to render a page with business data
+app.get('/business/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const business = await Business.findById(id);
+    if (!business) {
+      return res.status(404).send('Business not found');
     }
+    res.render('businessTemplate', { business });
+  } catch (err) {
+    res.status(500).send('Error fetching business');
+  }
 });
 
-// Handle GET request to fetch all businesses
-app.get('/api/businesses', async (req, res) => {
-    try {
-        const businesses = await Business.find();
-        res.status(200).json(businesses);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'An error occurred while fetching businesses' });
-    }
-});
-
-// Serve React Frontend (Ensure React build is correctly served)
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));  // Correct static path
-});
+// Static File Serving for React (or other static assets)
+app.use(express.static(path.join(__dirname, 'build')));
 
 // Start Server
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
