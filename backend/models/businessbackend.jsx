@@ -1,9 +1,20 @@
+// backend/models/business.js
 const mongoose = require('mongoose');
 
 const businessSchema = new mongoose.Schema({
-    businessName: { type: String, required: true },
-    mainImage: { type: String }, // Save image path or URL
-    description: { type: String, required: true },
-});
+  businessName: {
+    type: String,
+    required: true
+  },
+  mainImage: {
+    type: String,  // Path or URL to the image
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  }
+}, { timestamps: true });
 
-module.exports = mongoose.model('Business', businessSchema);
+const Business = mongoose.model('Business', businessSchema);
+module.exports = Business;

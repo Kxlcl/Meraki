@@ -105,3 +105,21 @@ const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// API route to get a specific business by its ID
+app.get('/api/businesses/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const business = await BusinessForm.findById(id); // Find business by ID
+    if (!business) {
+      return res.status(404).json({ error: 'Business not found' });
+    }
+    res.status(200).json(business); // Send back the business data
+  } catch (error) {
+    console.error('Error fetching business by ID:', error);
+    res.status(500).json({ error: 'Error fetching business by ID' });
+  }
+});
+
+// backend/server.js
+const Business = require('./models/business');  // Correct path to the model
