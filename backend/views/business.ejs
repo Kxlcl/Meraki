@@ -8,9 +8,10 @@
 <body>
     <h1><%= business.businessName %></h1>
     <p><%= business.description %></p>
-
     <% if (business.mainImage) { %>
-        <img src="/<%= business.mainImage %>" alt="<%= business.businessName %>" />
+        <img src="/<%= business.mainImage %>" alt="<%= business.businessName %>">
+    <% } else { %>
+        <p>No image available</p>
     <% } %>
 </body>
 </html>

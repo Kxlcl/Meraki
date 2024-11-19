@@ -22,9 +22,9 @@ app.set('views', path.join(__dirname, 'views')); // Set path to your views folde
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
-const DB_URI = 'mongodb+srv://merakiadmin:kM8VyIcA2K0bgZay@cluster0.op3vy.mongodb.net/';
+const DB_URI = 'mongodb+srv://merakiadmin:kM8VyIcA2K0bgZay@cluster0.op3vy.mongodb.net/test?retryWrites=true&w=majority';
 mongoose
-  .connect(DB_URI)
+  .connect(DB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB successfully'))
   .catch((err) => console.error('Error connecting to MongoDB:', err));
 
@@ -45,7 +45,9 @@ const businessSchema = new mongoose.Schema({
   mainImage: { type: String },
   description: { type: String, required: true },
 });
-const Business = mongoose.model('Business', businessSchema);
+
+// Specify the correct collection name explicitly
+const Business = mongoose.model('Business', businessSchema, 'businesses');
 
 // Handle GET request for a specific business
 app.get('/businesses/:id', async (req, res) => {
