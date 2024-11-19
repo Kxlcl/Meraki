@@ -35,7 +35,8 @@ function BusinessForm() {
         formDataObj.append('description', formData.description);
 
         try {
-            const response = await axios.post('http://localhost:5001/api/businesses', formDataObj, {
+            // Adjusted to the correct DigitalOcean URL
+            const response = await axios.post('https://monkfish-app-cemkx.ondigitalocean.app/addbusiness', formDataObj, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
