@@ -4,8 +4,6 @@ import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { Readable } from 'stream';
-import { GridFSBucket } from 'mongodb';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -20,123 +18,82 @@ app.use(express.json());
 app.set('view engine', 'ejs'); // Set EJS as view engine
 app.set('views', path.join(__dirname, 'views')); // Set path to your views folder
 
+// Serve static files (like images)
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // MongoDB Connection
-const DB_URI = 'mongodb+srv://merakiadmin:kM8VyIcA2K0bgZay@cluster0.op3vy.mongodb.net/';
-let bucket;
+const DB_URI = 'mongodb+srv://merakiadmin:kM8VyIcA2K0bgZay@cluster0.op3vy.mongodb.net/test'; // Make sure to include the db name
 mongoose
     .connect(DB_URI)
-    .then((connection) => {
-        console.log('Connected to MongoDB successfully');
-        bucket = new GridFSBucket(connection.connection.db, { bucketName: 'uploads' }); // Initialize GridFS bucket
-    })
+    .then(() => console.log('Connected to MongoDB successfully'))
     .catch((err) => console.error('Error connecting to MongoDB:', err));
 
-// In-memory storage for multer
-const storage = multer.memoryStorage();
+// File Upload Setup
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');  // Path where the uploaded files will be saved
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}-${file.originalname}`);  // Save with unique names based on timestamp
+    },
+});
 const upload = multer({ storage });
 
 // Mongoose Schema and Model
 const businessSchema = new mongoose.Schema({
     businessName: { type: String, required: true },
-    mainImage: { type: mongoose.Schema.Types.ObjectId }, // Store GridFS file ID
+    mainImage: { type: String },
     description: { type: String, required: true },
 });
 const Business = mongoose.model('Business', businessSchema);
 
-// Handle POST request to create a new business
+// GET route to fetch a single business
+app.get('/businesses/:id', async (req, res) => {
+  const { id } = req.params;
+  console.log('Received ID:', id);  // Log the received ID to check its format
+
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+      console.error('Invalid ObjectId format');
+      return res.status(400).render('error', { message: 'Invalid Business ID format', error: null });
+  }
+
+  try {
+      const business = await Business.findById(id);
+      if (!business) {
+          console.error('Business not found with the given ID');
+          return res.status(404).render('error', { message: 'Business not found', error: null });
+      }
+      // Update the image path to use the new link
+      business.mainImage = `https://monkfish-app-cemkx.ondigitalocean.app/${business.mainImage}`;
+      res.render('business', { business });
+  } catch (err) {
+      console.error('Database error:', err);
+      res.status(500).render('error', { message: 'Database error occurred', error: err });
+  }
+});
+
+// POST route to create a new business
 app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
     try {
         const { businessName, description } = req.body;
-        const file = req.file;
+        const mainImage = req.file ? `uploads/${req.file.filename}` : null;
 
-        if (!file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-
-        // Convert file buffer into readable stream
-        const readableStream = new Readable();
-        readableStream.push(file.buffer);
-        readableStream.push(null);
-
-        // Upload to GridFS
-        const uploadStream = bucket.openUploadStream(file.originalname, {
-            contentType: file.mimetype,
-        });
-        readableStream.pipe(uploadStream);
-
-        uploadStream.on('finish', async () => {
-            const business = new Business({
-                businessName,
-                mainImage: uploadStream.id, // Save GridFS file ID
-                description,
-            });
-            await business.save();
-            res.status(201).json({ message: 'Business created successfully', business });
+        const business = new Business({
+            businessName,
+            mainImage,
+            description,
         });
 
-        uploadStream.on('error', (error) => {
-            console.error('Error uploading file to GridFS:', error);
-            res.status(500).json({ error: 'Error uploading file to GridFS' });
-        });
+        await business.save();
+        res.status(201).json({ message: 'Business created successfully', business });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'An error occurred while creating the business' });
     }
 });
 
-// Retrieve a business by ID
-app.get('/businesses/:id', async (req, res) => {
-    const { id } = req.params;
-    console.log('Received ID:', id);
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        console.error('Invalid ObjectId format');
-        return res.status(400).render('error', { message: 'Invalid Business ID format', error: null });
-    }
-
-    try {
-        const business = await Business.findById(id);
-        if (!business) {
-            console.error('Business not found with the given ID');
-            return res.status(404).render('error', { message: 'Business not found', error: null });
-        }
-        res.render('business', { business });
-    } catch (err) {
-        console.error('Database error:', err);
-        res.status(500).render('error', { message: 'Database error occurred', error: err });
-    }
-});
-
-// Serve images from GridFS
-app.get('/images/:id', async (req, res) => {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(400).json({ error: 'Invalid image ID format' });
-    }
-
-    try {
-        const downloadStream = bucket.openDownloadStream(new mongoose.Types.ObjectId(id));
-
-        downloadStream.on('data', (chunk) => {
-            res.write(chunk);
-        });
-
-        downloadStream.on('end', () => {
-            res.end();
-        });
-
-        downloadStream.on('error', (error) => {
-            console.error('Error retrieving image from GridFS:', error);
-            res.status(404).json({ error: 'Image not found' });
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'An error occurred while retrieving the image' });
-    }
-});
-
-// Fetch all businesses
+// GET route to fetch all businesses
 app.get('/api/businesses', async (req, res) => {
     try {
         const businesses = await Business.find();
@@ -147,10 +104,11 @@ app.get('/api/businesses', async (req, res) => {
     }
 });
 
-// Serve React Frontend
-app.use(express.static(path.join(__dirname, 'build')));
+// Serve React Frontend (Ensure React build is correctly served)
+app.use(express.static(path.join(__dirname, 'build')));  // Correct static path to React build
+
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html'));
+    res.sendFile(path.join(__dirname, 'build', 'index.html'));  // Serve React app for all other routes
 });
 
 // Start Server
