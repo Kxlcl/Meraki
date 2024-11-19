@@ -4,6 +4,10 @@ import cors from 'cors';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -22,7 +26,7 @@ app.set('views', path.join(__dirname, 'views')); // Set path to your views folde
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // MongoDB Connection
-const DB_URI = 'mongodb+srv://merakiadmin:kM8VyIcA2K0bgZay@cluster0.op3vy.mongodb.net/test'; // Make sure to include the db name
+const DB_URI = process.env.MONGODB_URI;  // Use the environment variable for MongoDB URI
 mongoose
     .connect(DB_URI)
     .then(() => console.log('Connected to MongoDB successfully'))
@@ -47,7 +51,9 @@ const businessSchema = new mongoose.Schema({
 });
 const Business = mongoose.model('Business', businessSchema);
 
-// GET route to fetch a single business
+// Determine the base URL based on environment
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8080'; // Default to localhost for local development
+
 app.get('/businesses/:id', async (req, res) => {
   const { id } = req.params;
   console.log('Received ID:', id);  // Log the received ID to check its format
@@ -64,8 +70,10 @@ app.get('/businesses/:id', async (req, res) => {
           console.error('Business not found with the given ID');
           return res.status(404).render('error', { message: 'Business not found', error: null });
       }
-      // Update the image path to use the new link
-      business.mainImage = `https://monkfish-app-cemkx.ondigitalocean.app/${business.mainImage}`;
+
+      // Update the image URL to use the base URL
+      business.mainImage = `${BASE_URL}/${business.mainImage}`;
+
       res.render('business', { business });
   } catch (err) {
       console.error('Database error:', err);
@@ -73,7 +81,7 @@ app.get('/businesses/:id', async (req, res) => {
   }
 });
 
-// POST route to create a new business
+// Handle POST request to create a new business
 app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
     try {
         const { businessName, description } = req.body;
@@ -93,7 +101,7 @@ app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
     }
 });
 
-// GET route to fetch all businesses
+// Handle fetching all businesses (API route)
 app.get('/api/businesses', async (req, res) => {
     try {
         const businesses = await Business.find();
