@@ -23,33 +23,6 @@ mongoose
     .connect(DB_URI)
     .then(() => console.log('Connected to MongoDB successfully'))
     .catch((err) => console.error('Error connecting to MongoDB:', err));
-<<<<<<< HEAD
-
-// File Upload Setup
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    },
-});
-const upload = multer({ storage });
-
-// Mongoose Schema and Model
-const businessSchema = new mongoose.Schema({
-    businessName: { type: String, required: true },
-    mainImage: { type: String },
-    description: { type: String, required: true },
-});
-const Business = mongoose.model('Business', businessSchema);
-
-// Routes
-app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
-    try {
-        const { businessName, description } = req.body;
-        const mainImage = req.file ? req.file.path : null;
-=======
 
 // File Upload Setup
 const storage = multer.diskStorage({
@@ -82,7 +55,6 @@ app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
     try {
         const { businessName, description } = req.body;
         const mainImage = req.file ? `uploads/${req.file.filename}` : null;
->>>>>>> af40565 (fixed mongodb connection)
 
         const business = new Business({
             businessName,
@@ -93,40 +65,25 @@ app.post('/api/businesses', upload.single('mainImage'), async (req, res) => {
         await business.save();
         res.status(201).json({ message: 'Business created successfully', business });
     } catch (err) {
-<<<<<<< HEAD
-=======
         console.error(err);
->>>>>>> af40565 (fixed mongodb connection)
         res.status(500).json({ error: 'An error occurred while creating the business' });
     }
 });
 
-<<<<<<< HEAD
-=======
 // Handle GET request to fetch all businesses
->>>>>>> af40565 (fixed mongodb connection)
 app.get('/api/businesses', async (req, res) => {
     try {
         const businesses = await Business.find();
         res.status(200).json(businesses);
     } catch (err) {
-<<<<<<< HEAD
-=======
         console.error(err);
->>>>>>> af40565 (fixed mongodb connection)
         res.status(500).json({ error: 'An error occurred while fetching businesses' });
     }
 });
 
-<<<<<<< HEAD
-// Serve React Frontend
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'build', 'index.html')); // Correct static path
-=======
 // Serve React Frontend (Ensure React build is correctly served)
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'build', 'index.html'));  // Correct static path
->>>>>>> af40565 (fixed mongodb connection)
 });
 
 // Start Server
